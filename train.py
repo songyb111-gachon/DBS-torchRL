@@ -98,7 +98,7 @@ env = BinaryHologramEnv(
     T_steps=1,
     T_PSNR_DIFF=1/4,
     num_samples=10000,
-    importance_batch_size=256,  # GPU 배치 크기 (RTX 4090 24GB)
+    importance_batch_size=64,  # GPU 배치 크기 (VRAM에 맞게 조정)
 )
 
 # ============================================================================
@@ -106,8 +106,8 @@ env = BinaryHologramEnv(
 # ============================================================================
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-# 정책 네트워크 생성 (SB3 기본과 동일: MLP [64,64])
-policy = ActorCriticPolicy()
+# 정책 네트워크 생성
+policy = ActorCriticPolicy(features_dim_per_key=64)
 
 # 파라미터 수 출력
 total_params = sum(p.numel() for p in policy.parameters())
@@ -207,9 +207,7 @@ try:
 
             obs = next_obs
 
-        # 에피소드 종료 - 버퍼 잔여 obs 메모리 해제
-        ppo.buffer.flush()
-
+        # 에피소드 종료
         episode_count += 1
         episode_rewards.append(episode_reward)
 
