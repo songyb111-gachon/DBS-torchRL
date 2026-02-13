@@ -246,7 +246,7 @@ tensorboard --logdir=./ppo_tensorboard
 ```python
 env = BinaryHologramEnv(
     ...
-    importance_batch_size=256,  # RTX 4090 24GB 기준
+    importance_batch_size=128,  # RTX 4090 24GB 기준
 )
 ```
 
