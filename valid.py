@@ -77,8 +77,8 @@ model.eval()
 # ============================================================================
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-# 정책 네트워크 생성 (학습 때와 동일한 구조 - 확장된 네트워크)
-policy = ActorCriticPolicy(features_dim_per_key=128)
+# 정책 네트워크 생성 (학습 때와 동일한 구조)
+policy = ActorCriticPolicy(features_dim_per_key=64)
 
 ppo_model_path = "./ppo_pytorch_models/ppo_latest.pt"
 ppo = PPO.load(ppo_model_path, policy=policy, device=device)
@@ -116,17 +116,12 @@ for episode in range(num_episodes):
     total_reward = 0
 
     while not done:
-        # numpy obs를 텐서 dict로 변환
-        obs_tensor = {}
-        for key, val in obs.items():
-            if isinstance(val, np.ndarray):
-                obs_tensor[key] = torch.tensor(val, dtype=torch.float32, device=device).unsqueeze(0)
-            else:
-                obs_tensor[key] = torch.tensor(np.array(val), dtype=torch.float32, device=device).unsqueeze(0)
+        # obs는 이미 GPU 텐서 dict → 배치 차원만 추가
+        obs_batched = {k: v.unsqueeze(0) if v.dim() == 4 else v for k, v in obs.items()}
 
-        # deterministic 추론
-        action = ppo.policy.predict(obs_tensor, deterministic=True)
-        action_int = int(action[0]) if isinstance(action, np.ndarray) else int(action)
+        # deterministic 추론 (GPU에서)
+        action = ppo.policy.predict(obs_batched, deterministic=True)
+        action_int = action.item()
 
         obs, reward, terminated, truncated, info = env.step(action_int)
         total_reward += reward

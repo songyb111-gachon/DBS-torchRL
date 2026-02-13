@@ -74,8 +74,8 @@ padding = 0
 train_dataset = Dataset512(target_dir=target_dir, meta=meta, isTrain=True, padding=padding)
 valid_dataset = Dataset512(target_dir=valid_dir, meta=meta, isTrain=False, padding=padding)
 
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=2)
-valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False, pin_memory=True, num_workers=2)
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
 
 # ============================================================================
 # BinaryNet 사전학습 모델 로드
@@ -106,8 +106,8 @@ env = BinaryHologramEnv(
 # ============================================================================
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-# 정책 네트워크 생성 (확장: 64 -> 128 features per key)
-policy = ActorCriticPolicy(features_dim_per_key=128)
+# 정책 네트워크 생성
+policy = ActorCriticPolicy(features_dim_per_key=64)
 
 # 파라미터 수 출력
 total_params = sum(p.numel() for p in policy.parameters())
@@ -160,7 +160,7 @@ except Exception as e:
 if torch.cuda.is_available():
     allocated = torch.cuda.memory_allocated() / 1024**3
     reserved = torch.cuda.memory_reserved() / 1024**3
-    total = torch.cuda.get_device_properties(0).total_mem / 1024**3
+    total = torch.cuda.get_device_properties(0).total_memory / 1024**3
     print(f"\nGPU Memory: {allocated:.2f}GB allocated / {reserved:.2f}GB reserved / {total:.2f}GB total")
     print(f"GPU: {torch.cuda.get_device_name(0)}")
 
@@ -179,7 +179,6 @@ print(f"PPO Training Start (GPU Optimized)")
 print(f"Max Episodes: {max_episodes}")
 print(f"n_steps: {ppo_kwargs['n_steps']}, batch_size: {ppo_kwargs['batch_size']}")
 print(f"Mixed Precision (AMP): {ppo_kwargs['use_amp']}")
-print(f"features_dim_per_key: 128, net_arch: [512, 512]")
 print(f"{'='*60}\n")
 
 try:
