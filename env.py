@@ -241,10 +241,10 @@ class BinaryHologramEnv:
         closest_index = torch.argmin(torch.abs(self.psnr_change_tensor - psnr_change))
         reward = self.importance_tensor[closest_index].item()
 
-        # 음수 PSNR → 롤백 (GPU에서)
+        # 음수 PSNR → state만 롤백 (원래 코드와 동일: state_record는 유지)
         if psnr_change < 0:
             self.state[0, channel, row, col] = 1.0 - self.state[0, channel, row, col]
-            self.state_record[0, channel, row, col] -= 1.0
+            # state_record는 롤백하지 않음 (실패한 플립도 시도 기록으로 남김)
             self.flip_count -= 1
 
             obs = self._get_obs()
@@ -252,6 +252,15 @@ class BinaryHologramEnv:
 
         self.max_psnr_diff = max(self.max_psnr_diff, psnr_diff)
         success_ratio = self.flip_count / self.steps if self.steps > 0 else 0
+
+        # 1000 스텝마다 진행 상황 출력
+        if self.steps % 1000 == 0:
+            data_processing_time = time.time() - self.total_start_time
+            print(
+                f"\033[93m[Progress] Step: {self.steps} | PSNR: {psnr_after:.6f} | "
+                f"Diff: {psnr_diff:.6f} | Success: {success_ratio:.4f} | "
+                f"Flips: {self.flip_count} | Time: {data_processing_time:.1f}s\033[0m"
+            )
 
         while self.next_print_thresholds and psnr_after >= self.next_print_thresholds[0]:
             self.next_print_thresholds.pop(0)
