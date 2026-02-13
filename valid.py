@@ -77,7 +77,7 @@ model.eval()
 # ============================================================================
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-# 정책 네트워크 생성 (학습 때와 동일한 구조)
+# 정책 네트워크 생성 (학습 때와 동일한 구조)    
 policy = ActorCriticPolicy(features_dim_per_key=64)
 
 ppo_model_path = "./ppo_pytorch_models/ppo_latest.pt"
@@ -94,7 +94,7 @@ env = BinaryHologramEnv(
     T_steps=1,
     T_PSNR_DIFF=1,
     num_samples=1000,
-    importance_batch_size=64,
+    importance_batch_size=256,
 )
 
 # ============================================================================
