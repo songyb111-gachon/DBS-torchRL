@@ -98,7 +98,7 @@ env = BinaryHologramEnv(
     T_steps=1,
     T_PSNR_DIFF=1/4,
     num_samples=10000,
-    importance_batch_size=64,  # GPU 배치 크기 (VRAM에 맞게 조정)
+    importance_batch_size=256,  # GPU 배치 크기 (RTX 4090 24GB)
 )
 
 # ============================================================================

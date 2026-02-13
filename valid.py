@@ -94,7 +94,7 @@ env = BinaryHologramEnv(
     T_steps=1,
     T_PSNR_DIFF=1,
     num_samples=1000,
-    importance_batch_size=64,
+    importance_batch_size=256,
 )
 
 # ============================================================================
