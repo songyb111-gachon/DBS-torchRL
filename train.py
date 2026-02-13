@@ -28,6 +28,8 @@ from torch.utils.data import DataLoader
 import torchOptics.optics as tt
 import torchOptics.metrics as tm
 
+from torch.utils.tensorboard import SummaryWriter
+
 from env import BinaryHologramEnv
 from models import BinaryNet, Dataset512, IPS, CH
 from ppo import ActorCriticPolicy, PPO
@@ -98,7 +100,7 @@ env = BinaryHologramEnv(
     T_steps=1,
     T_PSNR_DIFF=1/4,
     num_samples=10000,
-    importance_batch_size=64,  # GPU 배치 크기 (VRAM에 맞게 조정)
+    importance_batch_size=256,  # GPU 배치 크기 (VRAM에 맞게 조정)
 )
 
 # ============================================================================
@@ -132,6 +134,12 @@ ppo_kwargs = dict(
 # 저장 디렉토리
 save_dir = "./ppo_pytorch_models/"
 os.makedirs(save_dir, exist_ok=True)
+
+# TensorBoard 설정
+tb_log_dir = f"./ppo_tensorboard/{current_date}"
+writer = SummaryWriter(log_dir=tb_log_dir)
+print(f"TensorBoard log dir: {tb_log_dir}")
+print(f"  → tensorboard --logdir=./ppo_tensorboard 로 확인")
 
 # 모델 로드 또는 새로 생성
 ppo_model_path = os.path.join(save_dir, "ppo_latest.pt")
@@ -204,6 +212,11 @@ try:
                     f"Entropy Loss: {metrics['entropy_loss']:.4f} | "
                     f"Total Loss: {metrics['total_loss']:.4f}\033[0m"
                 )
+                # TensorBoard: PPO 손실
+                writer.add_scalar("loss/policy_loss", metrics['policy_loss'], global_step)
+                writer.add_scalar("loss/value_loss", metrics['value_loss'], global_step)
+                writer.add_scalar("loss/entropy_loss", metrics['entropy_loss'], global_step)
+                writer.add_scalar("loss/total_loss", metrics['total_loss'], global_step)
 
             obs = next_obs
 
@@ -211,11 +224,23 @@ try:
         episode_count += 1
         episode_rewards.append(episode_reward)
 
+        # TensorBoard: 에피소드 메트릭
+        writer.add_scalar("episode/reward", episode_reward, episode_count)
+        writer.add_scalar("episode/length", env.steps, episode_count)
+        writer.add_scalar("episode/psnr_diff", env.max_psnr_diff, episode_count)
+        writer.add_scalar("episode/initial_psnr", env.initial_psnr, episode_count)
+        writer.add_scalar("episode/final_psnr", env.previous_psnr, episode_count)
+        writer.add_scalar("episode/flip_count", env.flip_count, episode_count)
+        if env.steps > 0:
+            writer.add_scalar("episode/success_ratio", env.flip_count / env.steps, episode_count)
+        writer.add_scalar("timesteps/total", global_step, episode_count)
+
         print(f"\033[41mEpisode {episode_count}: Total Reward: {episode_reward:.2f}\033[0m")
 
         # GPU 메모리 상태 주기적 출력 (50 에피소드마다)
         if episode_count % 50 == 0 and torch.cuda.is_available():
             allocated = torch.cuda.memory_allocated() / 1024**3
+            writer.add_scalar("system/gpu_memory_gb", allocated, episode_count)
             print(f"\033[93m[GPU] Memory allocated: {allocated:.2f}GB\033[0m")
 
         # 주기적으로 모델 저장 (10 에피소드마다)
@@ -228,6 +253,9 @@ try:
 
 except KeyboardInterrupt:
     print("\n학습이 사용자에 의해 중단되었습니다.")
+finally:
+    writer.close()
+    print("TensorBoard writer closed.")
 
 # ============================================================================
 # 최종 모델 저장
